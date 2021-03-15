@@ -4,3 +4,6 @@ HillaryEmails.zip
 
 # vscode settings
 .vscode/
+
+# Mac file
+.DS_Store

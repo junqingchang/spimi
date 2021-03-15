@@ -1,15 +1,15 @@
 import os
 from nltk.stem import PorterStemmer
 import string
+import nltk
 
 
 class SPIMI(object):
     def __init__(self):
         self.stemmer = PorterStemmer()
         self.exclusion = list(string.punctuation) + list(string.digits)
-
-    def spimi_invert(self):
-        pass
+        self.stop_words = list(nltk.corpus.stopwords.words('english'))
+        self.posting_list = {}
 
     def directory_listing(self, root):
         files_in_dir = os.listdir(root)
@@ -30,17 +30,34 @@ class SPIMI(object):
         for token in tokens:
             new_token = ''
             for char in token:
+                # Remove numerical and symbols
                 if char not in self.exclusion:
                     new_token += char
-            if new_token != '':
+            # Remove stopwords
+            if new_token != '' and new_token not in self.stop_words:
                 alphabet_only_tokens.append(new_token.lower())
         stem_tokens = [self.stemmer.stem(token) for token in alphabet_only_tokens]
         return stem_tokens
 
+    def create_posting_list(self, token, doc_id):
+        if token not in self.posting_list:
+            self.posting_list[token] = {doc_id: 1}
+        else:
+            if doc_id not in self.posting_list[token]:
+                self.posting_list[token][doc_id] = 1
+            else:
+                self.posting_list[token][doc_id] += 1
+
+    def spimi_invert(self, root, block_size=500):
+        files_in_dir = self.directory_listing(root)
+        for idx, file in enumerate(files_in_dir):
+            file_content = self.file_reading(file)
+            tokens = self.linguistic_transform(self.tokenizer(file_content))
+            for token in tokens:
+                self.create_posting_list(token, idx)
+
+            
 
 if __name__ == '__main__':
     spimi = SPIMI()
-    files = spimi.directory_listing('HillaryEmails')
-    file_content = spimi.file_reading(files[0])
-    tokens = spimi.tokenizer(file_content)
-    stemed = spimi.linguistic_transform(tokens)
+    spimi.spimi_invert('HillaryEmails')
