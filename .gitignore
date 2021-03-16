@@ -2,6 +2,9 @@
 HillaryEmails/
 HillaryEmails.zip
 
+# output
+output/
+
 # vscode settings
 .vscode/
 
