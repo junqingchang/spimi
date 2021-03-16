@@ -4,6 +4,7 @@ import string
 import nltk
 import sys
 import time
+import argparse
 
 # Run if first time
 # nltk.download('stopwords')
@@ -12,9 +13,11 @@ import time
 class SPIMI(object):
     def __init__(self, output_dir):
         self.stemmer = PorterStemmer()
-        self.exclusion = list(string.punctuation) + list(string.digits)
+        self.inclusion = list(string.ascii_lowercase) + list(string.ascii_uppercase)
         self.stop_words = list(nltk.corpus.stopwords.words('english'))
         self.output_dir = output_dir
+        self.overhead_parameter = 10000 * 512
+        self.block_files = []
         if not os.path.exists(self.output_dir):
             os.mkdir(self.output_dir)
 
@@ -38,12 +41,12 @@ class SPIMI(object):
             new_token = ''
             for char in token:
                 # Remove numerical and symbols
-                if char not in self.exclusion:
+                if char in self.inclusion:
                     new_token += char
             # Remove stopwords
             if new_token != '' and new_token not in self.stop_words:
-                alphabet_only_tokens.append(new_token.lower())
-        stem_tokens = [self.stemmer.stem(token) for token in alphabet_only_tokens]
+                alphabet_only_tokens.append(new_token)
+        stem_tokens = [self.stemmer.stem(token).lower() for token in alphabet_only_tokens]
         return stem_tokens
 
     def add_to_dictionary(self, dictionary, term):
@@ -101,11 +104,63 @@ class SPIMI(object):
         output_block_file = os.path.join(self.output_dir, f'BLOCK{block_num}.txt')
         with open(output_block_file, 'w', encoding='utf8') as f:
             for term in sorted_terms:
-                line = f'{term} {" ".join([str(doc_id) for doc_id in dictionary[term]])}'
+                line = f'{term} {" ".join([str(doc_id) for doc_id in dictionary[term]])}\n'
                 f.write(line)
+        self.block_files.append(output_block_file)
         return output_block_file
-            
+
+    def spimi_merge(self, output_file):
+        opened_block_files = [open(block_file, encoding='utf-8') for block_file in self.block_files]
+        file_lines = [block_file.readline()[:-1] for block_file in opened_block_files]
+        prev_term = ''
+        first_line = True
+
+        with open(output_file, 'w', encoding='utf-8') as f:
+            while (len(opened_block_files)) > 0:
+                first_index = file_lines.index(min(file_lines))
+                line = file_lines[first_index]
+                curr_term = line.split()[0]
+                curr_postings = ' '.join(line.split()[1:])
+
+                if curr_term != prev_term:
+                    if first_line:
+                        f.write(f'{curr_term} {curr_postings}')
+                        first_line = False
+                    else:
+                        f.write(f'\n{curr_term} {curr_postings}')
+                    prev_term = curr_term
+                else:
+                    f.write(f' {curr_postings}')
+
+                file_lines[first_index] = opened_block_files[first_index].readline()[:-1]
+
+                if file_lines[first_index] == '':
+                    opened_block_files[first_index].close()
+                    opened_block_files.pop(first_index)
+                    file_lines.pop(first_index)
+        return True
+
+    def spimi_index(self, root, output_file, block_size=100000):
+        index_start_time = time.time()
+        print('Starting Invert Function')
+        self.spimi_invert(root, block_size)
+        merge_start_invert_end_time = time.time()
+        print(f'Invert Complete, Time Taken: {merge_start_invert_end_time-index_start_time}')
+        print(f'Starting Merge of {len(self.block_files)} BLOCK files')
+        self.spimi_merge(output_file)
+        index_end_time = time.time()
+        print(f'Merge Complete, Time Taken: {index_end_time-merge_start_invert_end_time}')
+        print(f'Indexing Completed, Find index file at {output_file}, Time Taken: {index_end_time-index_start_time}')
+        
+
+parser = argparse.ArgumentParser(description='Single-Pass In-Memory Indexing')
+parser.add_argument('--path', default='HillaryEmails/')
+parser.add_argument('--block_size', type=int, default=100000)
+parser.add_argument('--output', default='output/')
+parser.add_argument('--filename', default='index.txt')
+args = parser.parse_args()
 
 if __name__ == '__main__':
-    spimi = SPIMI('output/')
-    spimi.spimi_invert('HillaryEmails')
+    print(args.output, args.path, args.filename, args.block_size)
+    spimi = SPIMI(args.output)
+    spimi.spimi_index(args.path, f'{os.path.join(args.output, args.filename)}', args.block_size)
