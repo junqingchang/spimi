@@ -14,21 +14,35 @@ class Searcher(object):
                 if term in self.query:
                     self.query_files.append(related_files[:])
 
-    def run_query(self, mode='AND'):
+    def run_query(self, mode='AND', exclude=None):
         if mode == 'AND':
-            output = self.and_query()
+            output = self.and_query(exclude)
+        elif mode == 'OR':
+            output = self.or_query(exclude)
 
         if len(output) != 0:
-            print(f'The following documents contains: {" AND ".join(self.query)}')
+            print(f'The following documents contains: {f" {mode} ".join(self.query)}')
             for document in output:
                 print(document)
+        else:
+            print(f'No documents found that contains: {f" {mode} ".join(self.query)}')
 
         return output
 
-    def and_query(self):
+    def and_query(self, exclude):
+        if self.query_files == []:
+            return []
         output = set(self.query_files[0])
         for i in range(1, len(self.query_files)):
             output = output.intersection(self.query_files[i])
+        return output
+
+    def or_query(self, exclude):
+        if self.query_files == []:
+            return []
+        output = set(self.query_files[0])
+        for i in range(1, len(self.query_files)):
+            output = output.union(self.query_files[i])
         return output
 
 
@@ -36,9 +50,10 @@ parser = argparse.ArgumentParser(description='Single-Pass In-Memory Indexing')
 parser.add_argument('--index', default='output/index.txt')
 parser.add_argument('--search', nargs='+', required=True)
 parser.add_argument('--mode', default='AND')
+parser.add_argument('--exclude', default=None)
 args = parser.parse_args()
 
 
 if __name__ == '__main__':
     searcher = Searcher(args.index, args.search)
-    searcher.run_query(args.mode)
+    searcher.run_query(args.mode, exclude=args.exclude)
