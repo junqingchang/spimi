@@ -107,8 +107,10 @@ class Searcher(object):
             return []
 
         tfs = []
-        dfs = [len(qf) for qf in self.df_files]
+        dfs = []
+        dfs = [len(set(qf)) for qf in self.df_files]
         N = len(os.listdir(all_docs_directory))
+        print(dfs)
 
         for i in range(len(output)):
             tfs.append([])
@@ -146,7 +148,7 @@ class Searcher(object):
             return []
 
         tfs = []
-        dfs = [len(qf) for qf in self.df_files]
+        dfs = [len(set(qf)) for qf in self.df_files]
         N = len(os.listdir(all_docs_directory))
 
         for i in range(len(output)):
@@ -186,3 +188,5 @@ args = parser.parse_args()
 if __name__ == '__main__':
     searcher = Searcher(args.index, args.search, args.ranked)
     searcher.run_query(args.mode, exclude=args.exclude)
+
+## Use shirer selv for experiment
