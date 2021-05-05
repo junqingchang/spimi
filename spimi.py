@@ -5,8 +5,6 @@ import nltk
 import sys
 import time
 import argparse
-import numpy as np
-from numpy.core.shape_base import block
 
 # Run if first time
 # nltk.download('stopwords')

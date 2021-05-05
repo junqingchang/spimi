@@ -4,7 +4,6 @@ import string
 from nltk.stem import PorterStemmer
 import os
 import math
-import numpy as np
 
 
 all_docs_directory = 'HillaryEmails/'
@@ -110,7 +109,6 @@ class Searcher(object):
         dfs = []
         dfs = [len(set(qf)) for qf in self.df_files]
         N = len(os.listdir(all_docs_directory))
-        print(dfs)
 
         for i in range(len(output)):
             tfs.append([])
